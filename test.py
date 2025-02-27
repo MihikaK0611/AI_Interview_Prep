@@ -7,19 +7,20 @@ import numpy as np
 from vosk import Model, KaldiRecognizer
 from deepface import DeepFace
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
+from sentence_transformers import SentenceTransformer, util
 import random
 import os
 
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
-MODEL_PATH = r"C:\Users\skbob\Downloads\vosk-model-small-en-us-0.15"
+MODEL_PATH = "vosk-model-small-en-us-0.15"
 if not os.path.exists(MODEL_PATH):
     raise FileNotFoundError(f"Vosk model not found at {MODEL_PATH}. Please download from https://alphacephei.com/vosk/models")
 model = Model(MODEL_PATH)
 recognizer = KaldiRecognizer(model, 16000)
 
 audio = pyaudio.PyAudio()
-stream = audio.open(format=pyaudio.paInt16, channels=1, rate=16000, input=True, frames_per_buffer=32768)
+stream = audio.open(format=pyaudio.paInt16, channels=1, rate=16000, input=True, frames_per_buffer=65536)
 stream.start_stream()
 
 mp_face_detection = mp.solutions.face_detection
@@ -28,16 +29,23 @@ analyzer = SentimentIntensityAnalyzer()
 
 question_bank = {
     "Technology": [
-        {"question": "What is Object-Oriented Programming?", "ideal_answer": "Object-Oriented Programming is a paradigm that organizes data into objects with attributes and methods."},
-        {"question": "Explain the concept of Machine Learning.", "ideal_answer": "Machine learning is a subset of AI that allows systems to learn from data without explicit programming."},
+        {"question": "What is Object-Oriented Programming?", "answer": "OOP is a programming paradigm using objects and classes."},
+        {"question": "Explain the concept of Machine Learning.", "answer": "Machine learning is a branch of AI that allows computers to learn from data."},
+        {"question": "How does a database work?", "answer": "A database stores structured information that can be retrieved and manipulated using queries."}
     ],
     "Marketing": [
-        {"question": "What is digital marketing?", "ideal_answer": "Digital marketing refers to marketing efforts that use the internet, social media, search engines, and other online channels."},
-        {"question": "Explain brand positioning.", "ideal_answer": "Brand positioning is the strategy of differentiating a brand in the market by targeting specific audiences."},
+        {"question": "What is digital marketing?", "answer": "Digital marketing is advertising through digital channels like social media, SEO, and email."},
+        {"question": "Explain brand positioning.", "answer": "Brand positioning defines how a brand is perceived relative to competitors in the market."},
+        {"question": "How do you measure marketing success?", "answer": "Marketing success is measured through KPIs like engagement, conversions, and revenue growth."}
     ],
+    "Finance": [
+        {"question": "What is the difference between assets and liabilities?", "answer": "Assets bring value to a company, while liabilities represent obligations."},
+        {"question": "Explain the concept of compound interest.", "answer": "Compound interest is the interest calculated on both the initial principal and accumulated interest."},
+        {"question": "What are the key financial statements?", "answer": "Key financial statements include the balance sheet, income statement, and cash flow statement."}
+    ]
 }
 
-domain = input("Select a domain (Technology / Marketing): ").strip().title()
+domain = input("Select a domain (Technology / Marketing / Finance): ").strip().title()
 if domain not in question_bank:
     print("Invalid domain. Defaulting to Technology.")
     domain = "Technology"
@@ -57,6 +65,13 @@ question_index = 0
 eye_contact_count = 0
 total_frames = 0
 engagement_score = 0
+
+model = SentenceTransformer("all-MiniLM-L6-v2")
+
+def semantic_similarity_score(user_answer, ideal_answer):
+    embeddings = model.encode([user_answer, ideal_answer], convert_to_tensor=True)
+    similarity = util.pytorch_cos_sim(embeddings[0], embeddings[1]).item()
+    return round(similarity * 100)  # Convert similarity to percentage
 
 while cap.isOpened():
     ret, frame = cap.read()
@@ -110,25 +125,36 @@ while cap.isOpened():
 
             if text_result.strip():
                 sentiment = analyzer.polarity_scores(text_result)
+                tone = "Neutral"
+                if sentiment["compound"] >= 0.05:
+                    tone = "Positive"
+                elif sentiment["compound"] <= -0.05:
+                    tone = "Negative"
                 confidence_score = round(abs(sentiment["compound"]) * 100)
                 confidence = "High" if confidence_score > 60 else "Medium" if confidence_score > 30 else "Low"
                 word_count = len(text_result.split())
                 clarity = "Clear & Detailed" if word_count > 20 else "Needs More Explanation"
 
-                ideal_answer = questions[question_index]['ideal_answer']
-                correctness_score = round((len(set(text_result.split()) & set(ideal_answer.split())) / len(set(ideal_answer.split()))) * 100)
-
+                ideal_answer = questions[question_index]['answer']
+                similarity_score = semantic_similarity_score(text_result, ideal_answer)  # Using Sentence Transformers
+                if similarity_score >= 75:
+                    similarity = "Highly Relevant "
+                elif similarity_score >= 50:
+                    similarity = "Partially Relevant"
+                else:
+                    similarity = "Irrelevant"
                 responses.append({
                     "question": questions[question_index]['question'],
                     "answer": text_result,
-                    "correctness_score": correctness_score,
+                    "correctness": similarity,
                     "confidence": confidence,
+                    "tone": tone, 
                     "clarity": clarity,
                     "emotion": emotion
                 })
 
                 question_index += 1
-                recording = False 
+                recording = False
 
     cv2.imshow("AI Interview Coach", frame)
     key = cv2.waitKey(1) & 0xFF
