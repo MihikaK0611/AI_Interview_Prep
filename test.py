@@ -55,12 +55,13 @@ random.shuffle(questions)
 
 cap = cv2.VideoCapture(0)
 print("AI Interview Coach Running... Press 's' to start speaking and 'q' to exit.")
-
-emotion_history = []
-stress_levels = []
+feedback = ""
+last_feedback_time = time.time()
+question_index = 0
 responses = []
 recording = False
-question_index = 0
+emotion_history = []
+stress_levels = []
 
 eye_contact_count = 0
 total_frames = 0
@@ -133,7 +134,7 @@ while cap.isOpened():
                 confidence_score = round(abs(sentiment["compound"]) * 100)
                 confidence = "High" if confidence_score > 60 else "Medium" if confidence_score > 30 else "Low"
                 word_count = len(text_result.split())
-                clarity = "Clear & Detailed" if word_count > 20 else "Needs More Explanation"
+                clarity = "Detailed and Well-Explained" if word_count > 20 else "Satisfactory but could be improved" if word_count >= 10 else "Needs more elaboration"
 
                 ideal_answer = questions[question_index]['answer']
                 similarity_score = semantic_similarity_score(text_result, ideal_answer)  # Using Sentence Transformers
@@ -143,6 +144,8 @@ while cap.isOpened():
                     similarity = "Partially Relevant"
                 else:
                     similarity = "Irrelevant"
+                feedback = f"Tone: {tone}, Confidence: {confidence}, Answer Quality: {clarity}, Relevance: {similarity}"
+                last_feedback_time = time.time()
                 responses.append({
                     "question": questions[question_index]['question'],
                     "answer": text_result,
@@ -156,11 +159,16 @@ while cap.isOpened():
                 question_index += 1
                 recording = False
 
+    if time.time() - last_feedback_time < 5:
+        cv2.putText(frame, f"Feedback: {feedback}", (10, 80), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 0), 2)
+
     cv2.imshow("AI Interview Coach", frame)
+
     key = cv2.waitKey(1) & 0xFF
 
     if key == ord('s'):
         recording = True
+
     elif key == ord('q') or question_index >= len(questions):
         break
 
