@@ -1,4 +1,4 @@
-import cv2
+import cv2 
 import mediapipe as mp
 import json
 import time
@@ -10,51 +10,90 @@ from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 from sentence_transformers import SentenceTransformer, util
 import random
 import os
+from groq import Groq
 
+# Initialize Groq client
+client = Groq(api_key="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")
+  # Ensure you have set this env variable
+
+# Suppress TensorFlow warnings
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
+# Load Vosk speech recognition model
 MODEL_PATH = "vosk-model-small-en-us-0.15"
 if not os.path.exists(MODEL_PATH):
-    raise FileNotFoundError(f"Vosk model not found at {MODEL_PATH}. Please download from https://alphacephei.com/vosk/models")
+    raise FileNotFoundError(f"Vosk model not found at {MODEL_PATH}. Download from https://alphacephei.com/vosk/models")
+
 model = Model(MODEL_PATH)
 recognizer = KaldiRecognizer(model, 16000)
 
+# Initialize audio input
 audio = pyaudio.PyAudio()
-stream = audio.open(format=pyaudio.paInt16, channels=1, rate=16000, input=True, frames_per_buffer=65536)
+stream = audio.open(format=pyaudio.paInt16, channels=1, rate=16000, input=True, frames_per_buffer=4096)
 stream.start_stream()
 
+# Initialize face detection & sentiment analysis
 mp_face_detection = mp.solutions.face_detection
 face_detection = mp_face_detection.FaceDetection(model_selection=0, min_detection_confidence=0.5)
 analyzer = SentimentIntensityAnalyzer()
+def generate_questions_and_answers(role, interview_type, experience, skills):
+    prompt = f"""
+Generate 5 interview questions and their ideal answers for a {role} role in a {interview_type} interview.
+The candidate has {experience} years of experience and skills in {skills}.
+Provide the output strictly in JSON format like this:
+[
+    {{"question": "Question 1?", "answer": "Ideal answer 1"}},
+    {{"question": "Question 2?", "answer": "Ideal answer 2"}}
+]
+"""
 
-question_bank = {
-    "Technology": [
-        {"question": "What is Object-Oriented Programming?", "answer": "OOP is a programming paradigm using objects and classes."},
-        {"question": "Explain the concept of Machine Learning.", "answer": "Machine learning is a branch of AI that allows computers to learn from data."},
-        {"question": "How does a database work?", "answer": "A database stores structured information that can be retrieved and manipulated using queries."}
-    ],
-    "Marketing": [
-        {"question": "What is digital marketing?", "answer": "Digital marketing is advertising through digital channels like social media, SEO, and email."},
-        {"question": "Explain brand positioning.", "answer": "Brand positioning defines how a brand is perceived relative to competitors in the market."},
-        {"question": "How do you measure marketing success?", "answer": "Marketing success is measured through KPIs like engagement, conversions, and revenue growth."}
-    ],
-    "Finance": [
-        {"question": "What is the difference between assets and liabilities?", "answer": "Assets bring value to a company, while liabilities represent obligations."},
-        {"question": "Explain the concept of compound interest.", "answer": "Compound interest is the interest calculated on both the initial principal and accumulated interest."},
-        {"question": "What are the key financial statements?", "answer": "Key financial statements include the balance sheet, income statement, and cash flow statement."}
-    ]
-}
+    response = client.chat.completions.create(
+        messages=[{"role": "user", "content": prompt}],
+        model="mixtral-8x7b-32768",
+    )
 
-domain = input("Select a domain (Technology / Marketing / Finance): ").strip().title()
-if domain not in question_bank:
-    print("Invalid domain. Defaulting to Technology.")
-    domain = "Technology"
+    # ✅ Debugging: Print raw API response
+    if not response.choices or not response.choices[0].message.content.strip():
+        print("⚠️ Error: API returned an empty response.")
+        return []
 
-questions = question_bank[domain]
-random.shuffle(questions)
+    raw_response = response.choices[0].message.content.strip()
+    print("🔍 Raw API Response:", raw_response)  # Debugging step
 
+    try:
+        # ✅ Clean and check JSON format
+        cleaned_response = raw_response.replace("\n", "").replace("\t", "").strip()
+
+        if not cleaned_response.startswith("[") or not cleaned_response.endswith("]"):
+            print("⚠️ Error: API response is not in valid JSON format.")
+            return []
+
+        # ✅ Parse JSON safely
+        qna_pairs = json.loads(cleaned_response)
+        return qna_pairs
+
+    except json.JSONDecodeError as e:
+        print("❌ Parsing Error:", str(e))
+        return []
+
+# Get user input for interview settings
+role = input("Enter the role (e.g., Software Engineer, Marketing Manager): ").strip()
+interview_type = input("Enter the interview type (Technical/HR/Behavioral): ").strip()
+skills = input("Enter the skills (e.g., Web Development, DSA,AI/ML): ").strip()
+Workexperience = input("years of experience in particular Role you have Selected ").strip()
+
+
+qna_pairs = generate_questions_and_answers(role, interview_type,skills,Workexperience)
+if not qna_pairs:
+    print("Failed to fetch questions. Exiting...")
+    exit()
+
+random.shuffle(qna_pairs)  # Randomize question order
+
+# Open webcam for AI interview coaching
 cap = cv2.VideoCapture(0)
 print("AI Interview Coach Running... Press 's' to start speaking and 'q' to exit.")
+
 feedback = ""
 last_feedback_time = time.time()
 question_index = 0
@@ -67,12 +106,14 @@ eye_contact_count = 0
 total_frames = 0
 engagement_score = 0
 
-model = SentenceTransformer("all-MiniLM-L6-v2")
+sentence_model = SentenceTransformer("all-MiniLM-L6-v2")
 
+# Function to calculate semantic similarity
 def semantic_similarity_score(user_answer, ideal_answer):
-    embeddings = model.encode([user_answer, ideal_answer], convert_to_tensor=True)
+    print()
+    embeddings = sentence_model.encode([user_answer, ideal_answer], convert_to_tensor=True)
     similarity = util.pytorch_cos_sim(embeddings[0], embeddings[1]).item()
-    return round(similarity * 100)  # Convert similarity to percentage
+    return round(similarity * 100)
 
 while cap.isOpened():
     ret, frame = cap.read()
@@ -85,7 +126,7 @@ while cap.isOpened():
 
     emotion = "Unknown"
     if results.detections:
-        eye_contact_count += 1  
+        eye_contact_count += 1  # User is making eye contact
         for detection in results.detections:
             bbox = detection.location_data.relative_bounding_box
             h, w, c = frame.shape
@@ -97,22 +138,22 @@ while cap.isOpened():
             if face_crop.size != 0:
                 try:
                     analysis = DeepFace.analyze(face_crop, actions=['emotion'], enforce_detection=False)
-                    emotion = analysis[0]['dominant_emotion']
-                    emotion_history.append(emotion)
-                    
-                    if emotion in ["fear", "sad", "angry"]:
-                        stress_levels.append(1)
-                    else:
-                        stress_levels.append(0)
+                    if analysis:
+                        emotion = analysis[0]['dominant_emotion']
+                        emotion_history.append(emotion)
 
+                        if emotion in ["fear", "sad", "angry"]:
+                            stress_levels.append(1)
+                        else:
+                            stress_levels.append(0)
                 except:
                     pass
 
             cv2.putText(frame, f"Emotion: {emotion}", (x, y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
             cv2.rectangle(frame, (x, y), (x + width, y + height), (0, 255, 0), 2)
 
-    if question_index < len(questions):
-        cv2.putText(frame, f"Q: {questions[question_index]['question']}", (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+    if question_index < len(qna_pairs):
+        cv2.putText(frame, f"Q: {qna_pairs[question_index]['question']}", (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
 
     if recording:
         try:
@@ -131,23 +172,23 @@ while cap.isOpened():
                     tone = "Positive"
                 elif sentiment["compound"] <= -0.05:
                     tone = "Negative"
+
                 confidence_score = round(abs(sentiment["compound"]) * 100)
                 confidence = "High" if confidence_score > 60 else "Medium" if confidence_score > 30 else "Low"
-                word_count = len(text_result.split())
-                clarity = "Detailed and Well-Explained" if word_count > 20 else "Satisfactory but could be improved" if word_count >= 10 else "Needs more elaboration"
 
-                ideal_answer = questions[question_index]['answer']
-                similarity_score = semantic_similarity_score(text_result, ideal_answer)  # Using Sentence Transformers
-                if similarity_score >= 75:
-                    similarity = "Highly Relevant "
-                elif similarity_score >= 50:
-                    similarity = "Partially Relevant"
-                else:
-                    similarity = "Irrelevant"
+                word_count = len(text_result.split())
+                clarity = "Detailed and Well-Explained" if word_count > 20 else "Needs more elaboration"
+
+                ideal_answer = qna_pairs[question_index]['answer']
+               
+                similarity_score = semantic_similarity_score(text_result, ideal_answer)
+                similarity = "Highly Relevant" if similarity_score >= 75 else "Partially Relevant" if similarity_score >= 50 else "Irrelevant"
+
                 feedback = f"Tone: {tone}, Confidence: {confidence}, Answer Quality: {clarity}, Relevance: {similarity}"
                 last_feedback_time = time.time()
+
                 responses.append({
-                    "question": questions[question_index]['question'],
+                    "question": qna_pairs[question_index]['question'],
                     "answer": text_result,
                     "correctness": similarity,
                     "confidence": confidence,
@@ -169,7 +210,7 @@ while cap.isOpened():
     if key == ord('s'):
         recording = True
 
-    elif key == ord('q') or question_index >= len(questions):
+    elif key == ord('q') or question_index >= len(qna_pairs):
         break
 
 cap.release()
@@ -178,10 +219,12 @@ stream.stop_stream()
 stream.close()
 audio.terminate()
 
+
 eye_contact_score = round((eye_contact_count / total_frames) * 100)
 emotional_stability_score = round((emotion_history.count(max(set(emotion_history), key=emotion_history.count)) / len(emotion_history)) * 100)
 stress_level = round((sum(stress_levels) / len(stress_levels)) * 100)
 
+# Generate final report
 report = {
     "soft_skills": {
         "Eye Contact Score": eye_contact_score,
@@ -191,7 +234,6 @@ report = {
     },
     "responses": responses
 }
-
 with open("interview_report.json", "w") as f:
     json.dump(report, f, indent=4)
 
