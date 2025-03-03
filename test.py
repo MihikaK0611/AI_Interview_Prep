@@ -4,22 +4,24 @@ import json
 import time
 import pyaudio
 import numpy as np
+import os
+import random
 from vosk import Model, KaldiRecognizer
 from deepface import DeepFace
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 from sentence_transformers import SentenceTransformer, util
-import random
-import os
+from gtts import gTTS
+import pygame
 from groq import Groq
 
-# Initialize Groq client
-client = Groq(api_key="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")
-  # Ensure you have set this env variable
+
+client = Groq(api_key="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")  
+
 
 # Suppress TensorFlow warnings
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
-# Load Vosk speech recognition model
+# Load Vosk Speech Recognition Model
 MODEL_PATH = "vosk-model-small-en-us-0.15"
 if not os.path.exists(MODEL_PATH):
     raise FileNotFoundError(f"Vosk model not found at {MODEL_PATH}. Download from https://alphacephei.com/vosk/models")
@@ -29,73 +31,87 @@ recognizer = KaldiRecognizer(model, 16000)
 
 # Initialize audio input
 audio = pyaudio.PyAudio()
-stream = audio.open(format=pyaudio.paInt16, channels=1, rate=16000, input=True, frames_per_buffer=4096)
+stream = audio.open(format=pyaudio.paInt16, channels=1, rate=16000, input=True, frames_per_buffer=16384)
 stream.start_stream()
 
 # Initialize face detection & sentiment analysis
 mp_face_detection = mp.solutions.face_detection
 face_detection = mp_face_detection.FaceDetection(model_selection=0, min_detection_confidence=0.5)
 analyzer = SentimentIntensityAnalyzer()
+
+# Initialize sentence transformer for similarity
+sentence_model = SentenceTransformer("all-MiniLM-L6-v2")
+
+# Function to generate AI-powered interview questions
 def generate_questions_and_answers(role, interview_type, experience, skills):
     prompt = f"""
-Generate 5 interview questions and their ideal answers for a {role} role in a {interview_type} interview.
-The candidate has {experience} years of experience and skills in {skills}.
-Provide the output strictly in JSON format like this:
-[
-    {{"question": "Question 1?", "answer": "Ideal answer 1"}},
-    {{"question": "Question 2?", "answer": "Ideal answer 2"}}
-]
-"""
-
-    response = client.chat.completions.create(
-        messages=[{"role": "user", "content": prompt}],
-        model="mixtral-8x7b-32768",
-    )
-
-    # ✅ Debugging: Print raw API response
-    if not response.choices or not response.choices[0].message.content.strip():
-        print("⚠️ Error: API returned an empty response.")
-        return []
-
-    raw_response = response.choices[0].message.content.strip()
-    print("🔍 Raw API Response:", raw_response)  # Debugging step
+    Generate 5 interview questions and their ideal answers for a {role} role in a {interview_type} interview.
+    The candidate has {experience} years of experience and skills in {skills}.
+    Provide the output strictly in JSON format like this:
+    [
+        {{"question": "Question 1?", "answer": "Ideal answer 1"}},
+        {{"question": "Question 2?", "answer": "Ideal answer 2"}}
+    ]
+    """
 
     try:
-        # ✅ Clean and check JSON format
-        cleaned_response = raw_response.replace("\n", "").replace("\t", "").strip()
+        response = client.chat.completions.create(
+            messages=[{"role": "user", "content": prompt}],
+            model="mixtral-8x7b-32768",
+        )
 
-        if not cleaned_response.startswith("[") or not cleaned_response.endswith("]"):
-            print("⚠️ Error: API response is not in valid JSON format.")
-            return []
+        raw_response = response.choices[0].message.content.strip()
 
-        # ✅ Parse JSON safely
-        qna_pairs = json.loads(cleaned_response)
+        qna_pairs = json.loads(raw_response)
         return qna_pairs
-
-    except json.JSONDecodeError as e:
-        print("❌ Parsing Error:", str(e))
+    except json.JSONDecodeError:
+        print("Error parsing API response! The response was not valid JSON.")
         return []
+    except Exception as e:
+        print(f"API call failed: {e}")
+        return []
+
+
+# Function to convert text to speech and play the audio
+def speak(text):
+    if os.path.exists("question.mp3"):
+        try:
+            pygame.mixer.quit()  # Ensure pygame releases the file
+            os.remove("question.mp3")  # Delete the file before creating a new one
+        except PermissionError:
+            print("Warning: Unable to delete question.mp3, trying a new filename.")
+            filename = f"question_{random.randint(1000,9999)}.mp3"  # Use a unique filename
+        else:
+            filename = "question.mp3"
+    else:
+        filename = "question.mp3"
+
+    tts = gTTS(text=text, lang='en')
+    tts.save(filename)
+    pygame.mixer.init()
+    pygame.mixer.music.load(filename)
+    pygame.mixer.music.play()
+    while pygame.mixer.music.get_busy():
+        time.sleep(1)
+
 
 # Get user input for interview settings
 role = input("Enter the role (e.g., Software Engineer, Marketing Manager): ").strip()
 interview_type = input("Enter the interview type (Technical/HR/Behavioral): ").strip()
-skills = input("Enter the skills (e.g., Web Development, DSA,AI/ML): ").strip()
-Workexperience = input("years of experience in particular Role you have Selected ").strip()
+skills = input("Enter the skills (e.g., Web Development, DSA, AI/ML): ").strip()
+experience = input("Years of experience in the selected role: ").strip()
 
-
-qna_pairs = generate_questions_and_answers(role, interview_type,skills,Workexperience)
+qna_pairs = generate_questions_and_answers(role, interview_type, experience, skills)
 if not qna_pairs:
     print("Failed to fetch questions. Exiting...")
     exit()
 
-random.shuffle(qna_pairs)  # Randomize question order
+random.shuffle(qna_pairs)
 
 # Open webcam for AI interview coaching
 cap = cv2.VideoCapture(0)
 print("AI Interview Coach Running... Press 's' to start speaking and 'q' to exit.")
 
-feedback = ""
-last_feedback_time = time.time()
 question_index = 0
 responses = []
 recording = False
@@ -110,7 +126,6 @@ sentence_model = SentenceTransformer("all-MiniLM-L6-v2")
 
 # Function to calculate semantic similarity
 def semantic_similarity_score(user_answer, ideal_answer):
-    print()
     embeddings = sentence_model.encode([user_answer, ideal_answer], convert_to_tensor=True)
     similarity = util.pytorch_cos_sim(embeddings[0], embeddings[1]).item()
     return round(similarity * 100)
@@ -126,13 +141,13 @@ while cap.isOpened():
 
     emotion = "Unknown"
     if results.detections:
-        eye_contact_count += 1  # User is making eye contact
+        eye_contact_count += 1
         for detection in results.detections:
             bbox = detection.location_data.relative_bounding_box
             h, w, c = frame.shape
             x, y = int(bbox.xmin * w), int(bbox.ymin * h)
             width = int(bbox.width * w)
-            height = int(bbox.height * h) if hasattr(bbox, 'height') else width
+            height = int(bbox.height * h)
 
             face_crop = frame[y:y+height, x:x+width]
             if face_crop.size != 0:
@@ -141,7 +156,6 @@ while cap.isOpened():
                     if analysis:
                         emotion = analysis[0]['dominant_emotion']
                         emotion_history.append(emotion)
-
                         if emotion in ["fear", "sad", "angry"]:
                             stress_levels.append(1)
                         else:
@@ -172,7 +186,6 @@ while cap.isOpened():
                     tone = "Positive"
                 elif sentiment["compound"] <= -0.05:
                     tone = "Negative"
-
                 confidence_score = round(abs(sentiment["compound"]) * 100)
                 confidence = "High" if confidence_score > 60 else "Medium" if confidence_score > 30 else "Low"
 
@@ -180,12 +193,8 @@ while cap.isOpened():
                 clarity = "Detailed and Well-Explained" if word_count > 20 else "Needs more elaboration"
 
                 ideal_answer = qna_pairs[question_index]['answer']
-               
                 similarity_score = semantic_similarity_score(text_result, ideal_answer)
                 similarity = "Highly Relevant" if similarity_score >= 75 else "Partially Relevant" if similarity_score >= 50 else "Irrelevant"
-
-                feedback = f"Tone: {tone}, Confidence: {confidence}, Answer Quality: {clarity}, Relevance: {similarity}"
-                last_feedback_time = time.time()
 
                 responses.append({
                     "question": qna_pairs[question_index]['question'],
@@ -198,20 +207,18 @@ while cap.isOpened():
                 })
 
                 question_index += 1
-                recording = False
-
-    if time.time() - last_feedback_time < 5:
-        cv2.putText(frame, f"Feedback: {feedback}", (10, 80), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 0), 2)
+                recording = False  # Stop recording until 's' is pressed again
 
     cv2.imshow("AI Interview Coach", frame)
-
     key = cv2.waitKey(1) & 0xFF
 
-    if key == ord('s'):
-        recording = True
+    if key == ord('s') and not recording and question_index < len(qna_pairs):  
+        speak(qna_pairs[question_index]['question'])  # Speak the question only when 's' is pressed
+        recording = True  # Start recording the answer
 
     elif key == ord('q') or question_index >= len(qna_pairs):
         break
+
 
 cap.release()
 cv2.destroyAllWindows()
