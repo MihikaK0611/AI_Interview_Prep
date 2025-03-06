@@ -50,6 +50,7 @@ qna_pairs = []
 def index():
     return render_template("index.html")
 
+@app.route('/generate_questions', methods=['POST'])
 def generate_questions():
     global qna_pairs
     data = request.json
@@ -81,7 +82,6 @@ def generate_questions():
     except Exception as e:
         return jsonify({"error": str(e)})
 
-
 @app.route('/speak', methods=['POST'])
 def speak():
     data = request.json
@@ -110,25 +110,27 @@ stress_levels = []
 
 eye_contact_count = 0
 total_frames = 0
-engagement_score = 0
 
 @app.route("/start_recording", methods=["POST"])
 def start_recording():
     global question_index, recording, responses, eye_contact_count, total_frames, emotion_history, stress_levels, qna_pairs
 
-    # Fetch interview parameters from the request
     data = request.json
     role = data.get("role")
     interview_type = data.get("interview_type")
     experience = data.get("experience")
     skills = data.get("skills")
 
-    # Call generate_questions function to populate qna_pairs
-    response = generate_questions()
-    if isinstance(response, dict) and "error" in response:
+    response = requests.post("http://127.0.0.1:5000/generate_questions", json={
+        "role": role,
+        "interview_type": interview_type,
+        "experience": experience,
+        "skills": skills
+    })
+    if response.status_code != 200:
         return jsonify({"error": "Failed to generate questions."})
-    
-    qna_pairs = response.json  # Store the generated questions in qna_pairs
+
+    qna_pairs = response.json()
 
     cap = cv2.VideoCapture(0)
     if not cap.isOpened():
@@ -167,15 +169,9 @@ def start_recording():
                     except:
                         pass
 
-                cv2.putText(frame, f"Emotion: {emotion}", (x, y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (0, 255, 0), 2)
-                cv2.rectangle(frame, (x, y), (x + width, y + height), (0, 255, 0), 2)
-
         if qna_pairs and 0 <= question_index < 5:
             question = qna_pairs[question_index].get("question", "No question found")
             cv2.putText(frame, f"Q: {question}", (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
-        else:
-            print("Error: qna_pairs is empty or question_index is out of range")
-
 
         if recording:
             try:
@@ -246,7 +242,6 @@ def start_recording():
         },
         "responses": responses
     })
-
 
 if __name__ == "__main__":
     app.run(debug=True)
