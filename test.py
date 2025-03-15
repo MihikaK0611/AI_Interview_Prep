@@ -24,7 +24,7 @@ client = Groq(api_key="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"
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 # Load Vosk Speech Recognition Model
-MODEL_PATH = "vosk-model-small-en-us-0.15"
+MODEL_PATH = r"C:\Users\skbob\Downloads\vosk-model-small-en-us-0.15"
 if not os.path.exists(MODEL_PATH):
     raise FileNotFoundError(f"Vosk model not found at {MODEL_PATH}.")
 
@@ -114,13 +114,14 @@ total_frames = 0
 @app.route("/start_recording", methods=["POST"])
 def start_recording():
     global question_index, recording, responses, eye_contact_count, total_frames, emotion_history, stress_levels, qna_pairs
-
+    global emotional_stability_score, eye_contact_score, stress_level
     data = request.json
     role = data.get("role")
     interview_type = data.get("interview_type")
     experience = data.get("experience")
     skills = data.get("skills")
 
+    # Generate questions
     response = requests.post("http://127.0.0.1:5000/generate_questions", json={
         "role": role,
         "interview_type": interview_type,
@@ -155,6 +156,10 @@ def start_recording():
                 width = int(bbox.width * w)
                 height = int(bbox.height * h)
 
+                # Draw the green box around detected face
+                cv2.rectangle(frame, (x, y), (x + width, y + height), (0, 255, 0), 2)
+
+                # Extract face region
                 face_crop = frame[y:y+height, x:x+width]
                 if face_crop.size != 0:
                     try:
@@ -169,9 +174,24 @@ def start_recording():
                     except:
                         pass
 
-        if qna_pairs and 0 <= question_index < 5:
+        # Compute emotional stability score dynamically
+        emotional_stability_score = round((emotion_history.count(max(set(emotion_history), key=emotion_history.count)) / len(emotion_history)) * 100) if emotion_history else 0
+
+        # Display detected emotion & emotional stability score on webcam feed
+        cv2.putText(frame, f"Emotion: {emotion}", (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+        cv2.putText(frame, f"Emotional Stability: {emotional_stability_score}%", (10, 80), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+
+        # Draw a blue progress bar for emotional stability score
+        bar_x = 20
+        bar_y = 110
+        bar_width = 200
+        filled_width = int((emotional_stability_score / 100) * bar_width)
+        cv2.rectangle(frame, (bar_x, bar_y), (bar_x + bar_width, bar_y + 20), (200, 200, 200), -1)  # Background
+        cv2.rectangle(frame, (bar_x, bar_y), (bar_x + filled_width, bar_y + 20), (255, 0, 0), -1)  # Filled part
+
+        if qna_pairs and 0 <= question_index < len(qna_pairs):
             question = qna_pairs[question_index].get("question", "No question found")
-            cv2.putText(frame, f"Q: {question}", (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
+            cv2.putText(frame, f"Q: {question}", (10, 150), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
 
         if recording:
             try:
@@ -217,9 +237,9 @@ def start_recording():
         key = cv2.waitKey(1) & 0xFF
 
         if key == ord('s') and not recording and question_index < len(qna_pairs):  
-            # Send request to speak API instead of calling speak() directly
+            # Speak the question before recording starts
             requests.post("http://127.0.0.1:5000/speak", json={"text": qna_pairs[question_index]['question']})
-            recording = True  # Start recording the answer
+            recording = True  
 
         elif key == ord('q') or question_index >= len(qna_pairs):
             break
@@ -231,7 +251,6 @@ def start_recording():
     audio.terminate()
 
     eye_contact_score = round((eye_contact_count / total_frames) * 100)
-    emotional_stability_score = round((emotion_history.count(max(set(emotion_history), key=emotion_history.count)) / len(emotion_history)) * 100)
     stress_level = round((sum(stress_levels) / len(stress_levels)) * 100)
 
     return jsonify({
@@ -242,6 +261,91 @@ def start_recording():
         },
         "responses": responses
     })
+
+
+@app.route("/stop_recording", methods=["POST"])
+def stop_recording():
+    interview_data = {
+        "soft_skills": {
+            "Eye Contact Score": eye_contact_score,
+            "Emotional Stability Score": emotional_stability_score,
+            "Stress Level": stress_level
+        },
+        "responses": responses
+    }
+    return jsonify(interview_data)
+
+@app.route('/generate_report', methods=['POST'])
+def generate_report():
+    data = request.json
+
+    html_content = f"""
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Interview Report</title>
+        <style>
+            body {{
+                font-family: Arial, sans-serif;
+                background-color: #f4f4f4;
+                padding: 20px;
+                text-align: center;
+            }}
+            .container {{
+                background: white;
+                padding: 20px;
+                box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+                border-radius: 5px;
+                max-width: 800px;
+                margin: auto;
+            }}
+            h2 {{
+                color: #333;
+            }}
+            .report-section {{
+                text-align: left;
+                margin-bottom: 20px;
+            }}
+            .question {{
+                font-weight: bold;
+                margin-top: 10px;
+            }}
+            .answer {{
+                background: #e9ecef;
+                padding: 10px;
+                border-radius: 5px;
+            }}
+            .soft-skills {{
+                background: #d4edda;
+                padding: 10px;
+                border-radius: 5px;
+            }}
+        </style>
+    </head>
+    <body>
+        <div class="container">
+            <h2>Interview Report</h2>
+
+            <div class="report-section">
+                <h3>Soft Skills Analysis</h3>
+                <div class="soft-skills">
+                    <p><strong>Eye Contact Score:</strong> {data["soft_skills"]["Eye Contact Score"]}%</p>
+                    <p><strong>Emotional Stability Score:</strong> {data["soft_skills"]["Emotional Stability Score"]}%</p>
+                    <p><strong>Stress Level:</strong> {data["soft_skills"]["Stress Level"]}%</p>
+                </div>
+            </div>
+
+            <div class="report-section">
+                <h3>Question & Answer Review</h3>
+                {"".join(f'<p class="question">{i+1}. {resp["question"]}</p><p class="answer"><strong>Answer:</strong> {resp["answer"]}</p><p><strong>Correctness:</strong> {resp["correctness"]}</p><p><strong>Confidence:</strong> {resp["confidence"]}</p><p><strong>Tone:</strong> {resp["tone"]}</p><p><strong>Clarity:</strong> {resp["clarity"]}</p><p><strong>Emotion Detected:</strong> {resp["emotion"]}</p><hr>' for i, resp in enumerate(data["responses"]))}
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    return html_content
 
 if __name__ == "__main__":
     app.run(debug=True)
