@@ -3,26 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="{{ url_for('static', filename='login_signup_style.css') }}">
     <title>Login | HealthAlign AI</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='login_signup_style.css') }}">
 </head>
 <body>
-    <div class="container">
-        <div class="form-container">
-            <h2>Login</h2>
-            <form action="{{ url_for('login') }}" method="POST">
-                <label for="email">Email:</label>
-                <input type="email" id="email" name="email" required>
-                
-                <label for="password">Password:</label>
-                <input type="password" id="password" name="password" required>
-                
-                <input type="submit" value="Login">
-            </form>
-            <p>Don't have an account? <a href="{{url_for('signup')}}">Sign Up</a></p>
+    <div class="main-wrapper">
+        <div class="left-panel">
+            <h1 class="section-title">AI Mock Interview</h1>
+            <h1 class="main-heading">Transform Your Interview Preparation</h1>
+            <p class="description">
+                Leverage cutting-edge AI to simulate real interview scenarios, receive instant feedback, and 
+                boost your confidence with data-driven insights.
+            </p>
+        </div>
+    
+    
+   
+    
+        <div class="right-panel">
+            <div class="form-box">
+                <h2>Welcome Back</h2>
+                <br>
+                <p>Log in to continue your journey</p>
+                <form action="{{ url_for('login') }}" method="POST">
+                    <input type="email" id="email" name="email" placeholder="Email" required>
+                    <input type="password" id="password" name="password" placeholder="Password" required>
+                    <button type="submit">Login</button>
+                </form>
+                <p class="login-text">Don't have an account? <a href="{{ url_for('signup') }}">Sign Up</a></p>
+            </div>
         </div>
     </div>
+
     {% include 'flash_error.html' %}
-   
 </body>
 </html>

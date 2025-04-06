@@ -1,0 +1,66 @@
+.flash-messages {
+    position: fixed;
+    top: 1rem;
+    right: 1rem;
+    z-index: 9999;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    animation: fadeInSlide 0.5s ease forwards;
+}
+
+/* Base style for all alerts */
+.alert {
+    padding: 1rem 1.5rem;
+    border-radius: 0.75rem;
+    font-size: 0.95rem;
+    font-weight: 500;
+    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.1);
+    color: white;
+    animation: slideIn 0.3s ease-out;
+    max-width: 300px;
+    word-wrap: break-word;
+    line-height: 1.4;
+    font-family: 'Segoe UI', sans-serif;
+}
+
+/* Alert categories */
+.alert-success {
+    background-color: #22c55e; /* green */
+}
+
+.alert-error,
+.alert-danger {
+    background-color: #ef4444; /* red */
+}
+
+.alert-warning {
+    background-color: #f59e0b; /* orange */
+}
+
+.alert-info {
+    background-color: #3b82f6; /* blue */
+}
+
+/* Animation */
+@keyframes slideIn {
+    0% {
+        opacity: 0;
+        transform: translateX(100%);
+    }
+    100% {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes fadeInSlide {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
