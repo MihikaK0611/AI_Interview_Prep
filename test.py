@@ -7,7 +7,9 @@ import numpy as np
 import os
 import random
 import requests
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request, jsonify, flash, redirect, url_for
+
+
 from vosk import Model, KaldiRecognizer
 from deepface import DeepFace
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
@@ -15,16 +17,23 @@ from sentence_transformers import SentenceTransformer, util
 from gtts import gTTS
 import pygame
 from groq import Groq
+from flask_sqlalchemy import SQLAlchemy
+from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
+from datetime import timedelta
+from werkzeug.security import generate_password_hash, check_password_hash
+import re
+from collections import Counter
+import string
 
 app = Flask(__name__)
 
-client = Groq(api_key="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")
+client = Groq(api_key="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")
 
 # Suppress TensorFlow warnings
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 # Load Vosk Speech Recognition Model
-MODEL_PATH = r"C:\Users\skbob\Downloads\vosk-model-small-en-us-0.15"
+MODEL_PATH = "vosk-model-small-en-us-0.15"
 if not os.path.exists(MODEL_PATH):
     raise FileNotFoundError(f"Vosk model not found at {MODEL_PATH}.")
 
@@ -45,6 +54,53 @@ analyzer = SentimentIntensityAnalyzer()
 sentence_model = SentenceTransformer("all-MiniLM-L6-v2")
 
 qna_pairs = []
+
+
+
+
+app = Flask(__name__)
+app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///prompts.db'
+app.config['SECRET_KEY'] = 'your_secret_key'
+db = SQLAlchemy(app)
+login_manager = LoginManager(app)
+login_manager.login_view = 'login'
+
+class User(UserMixin, db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    email = db.Column(db.String(150), unique=True, nullable=False)
+    password = db.Column(db.String(150), nullable=False)
+
+class Prompt(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    prompt_text = db.Column(db.String(500), nullable=False)
+    
+    def __init__(self, prompt_text):
+        self.prompt_text = prompt_text
+
+@login_manager.user_loader
+def load_user(user_id):
+    return User.query.get(int(user_id))
+
+with app.app_context():
+    db.create_all()
+
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=30)  # 30-minute session timeout
+login_manager.session_protection = "strong"
+
+# Validate password
+def validate_password(password):
+    if len(password) < 8:
+        return "Password must be at least 8 characters long."
+    if not re.search(r"[A-Z]", password):
+        return "Password must contain at least one uppercase letter."
+    if not re.search(r"[a-z]", password):
+        return "Password must contain at least one lowercase letter."
+    if not re.search(r"[0-9]", password):
+        return "Password must contain at least one digit."
+    if not re.search(r"[!@#$%^&*(),.?\":{}|<>]", password):
+        return "Password must contain at least one special character."
+    return None
+
 
 @app.route('/')
 def index():
@@ -72,7 +128,7 @@ def generate_questions():
     try:
         response = client.chat.completions.create(
             messages=[{"role": "user", "content": prompt}],
-            model="mixtral-8x7b-32768",
+            model="llama-3.3-70b-versatile",
         )
 
         raw_response = response.choices[0].message.content.strip()
@@ -234,6 +290,7 @@ def start_recording():
                     recording = False  # Stop recording until 's' is pressed again
 
         cv2.imshow("AI Interview Coach", frame)
+        
         key = cv2.waitKey(1) & 0xFF
 
         if key == ord('s') and not recording and question_index < len(qna_pairs):  
@@ -346,6 +403,56 @@ def generate_report():
     </html>
     """
     return html_content
+
+
+
+ 
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        email = request.form['email']
+        password = request.form['password']
+        user = User.query.filter_by(email=email).first()
+        if user and check_password_hash(user.password, password):
+            login_user(user)
+            return redirect(url_for('index'))
+        else:
+            flash('Invalid email or password', 'error')
+    return render_template('login.html')
+
+@app.route('/signup', methods=['GET', 'POST'])
+def signup():
+    if request.method == 'POST':
+        email = request.form['email']
+        password = request.form['password']
+        
+        # Validate the password
+        validation_error = validate_password(password)
+        if validation_error:
+            flash(validation_error, 'error')
+            return redirect(url_for('signup'))
+
+        # Check if user already exists
+        existing_user = User.query.filter_by(email=email).first()
+        if existing_user:
+            flash('Email is already in use.', 'error')
+            return redirect(url_for('signup'))
+
+        # Create a new user with hashed password
+        hashed_password = generate_password_hash(password, method='pbkdf2:sha256')
+
+        new_user = User(email=email, password=hashed_password)
+        db.session.add(new_user)
+        db.session.commit()
+        flash('Account created successfully!')
+        return redirect(url_for('login'))
+    return render_template('signup.html')
+
+@app.route('/logout')
+@login_required
+def logout():
+    logout_user()
+    return redirect(url_for('index'))   
 
 if __name__ == "__main__":
     app.run(debug=True)
