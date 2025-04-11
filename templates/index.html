@@ -2,49 +2,73 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>AI Interview Coach</title>
   <link rel="stylesheet" href="/static/style.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
 </head>
 <body>
-  <nav class="navbar">
-    <div class="nav-container">
-      <h2 class="logo">AI Interview Coach</h2>
-      <ul class="nav-links">
-        <li><a href="{{ url_for('index') }}">Home</a></li>
+  <!-- Navbar -->
+<nav class="navbar navbar-expand-lg navbar-dark" style="background: linear-gradient(90deg, #4b6cb7, #182848);">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="#">Career Elevate AI</a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
+      <ul class="navbar-nav">
+        <li class="nav-item"><a class="nav-link nav-link-custom" href="{{ url_for('home') }}">Home</a></li>
         {% if current_user.is_authenticated %}
-        <li><a href="{{ url_for('logout') }}">Logout</a></li>
+        <li class="nav-item"><a class="nav-link nav-link-custom" href="{{ url_for('logout') }}">Logout</a></li>
         {% else %}
-        <li><a href="{{ url_for('login') }}">Join Us</a></li>
+        <li class="nav-item"><a class="nav-link nav-link-custom" href="{{ url_for('login') }}">Join Us</a></li>
         {% endif %}
       </ul>
     </div>
-  </nav>
+  </div>
+</nav>
+
 
   <main class="main-container">
-    <div class="form-card">
-      <h1>Start Your Mock Interview</h1>
-
-      <label for="role">Interview Role:</label>
-      <input type="text" id="role" placeholder="e.g. Data Scientist">
-
-      <label for="type">Interview Type:</label>
-      <input type="text" id="type" placeholder="e.g. Technical, HR">
-
-      <label for="experience">Years of Experience:</label>
-      <input type="number" id="experience" placeholder="e.g. 3">
-
-      <label for="skills">Skills:</label>
-      <input type="text" id="skills" placeholder="e.g. Python, Machine Learning">
-
-      <div class="button-group">
-        <button id="startInterview">Start Interview</button>
-        <button id="stopInterview" class="stop-btn">Stop Interview</button>
+    <div class="form-card fade-in">
+      <h1>Practice Your Interview</h1>
+  
+      <form id="interviewForm">
+        <div class="form-group">
+          <label for="role">Interview Role:</label>
+          <input type="text" id="role" placeholder="e.g. Data Scientist" required>
+        </div>
+  
+        <div class="form-group">
+          <label for="type">Interview Type:</label>
+          <input type="text" id="type" placeholder="e.g. Technical, HR" required>
+        </div>
+  
+        <div class="form-group">
+          <label for="experience">Years of Experience:</label>
+          <input type="number" id="experience" placeholder="e.g. 3" min="0" required>
+        </div>
+  
+        <div class="form-group">
+          <label for="skills">Skills:</label>
+          <input type="text" id="skills" placeholder="e.g. Python, ML, SQL" required>
+        </div>
+  
+        <div class="button-group">
+          <button type="button" id="startInterview">🎤 Start Interview</button>
+          <button type="button" id="stopInterview" class="stop-btn">🛑 Stop</button>
+        </div>
+      </form>
+  
+      <div id="results">
+        <!-- Interview response will show here -->
       </div>
-
-      <div id="results"></div>
     </div>
   </main>
+  
 
   <script src="/static/script.js"></script>
 </body>
