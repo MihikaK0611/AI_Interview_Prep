@@ -103,8 +103,16 @@ def validate_password(password):
 
 
 @app.route('/')
+def root():
+    return redirect(url_for('home'))
+
+@app.route('/home')
+def home():
+    return render_template('home.html')
+
+@app.route('/index')
 def index():
-    return render_template("index.html")
+    return render_template('index.html')
 
 @app.route('/generate_questions', methods=['POST'])
 def generate_questions():
@@ -415,7 +423,7 @@ def login():
         user = User.query.filter_by(email=email).first()
         if user and check_password_hash(user.password, password):
             login_user(user)
-            return redirect(url_for('index'))
+            return redirect(url_for('home'))
         else:
             flash('Invalid email or password', 'error')
     return render_template('login.html')
@@ -452,7 +460,7 @@ def signup():
 @login_required
 def logout():
     logout_user()
-    return redirect(url_for('index'))   
+    return redirect(url_for('home'))   
 
 if __name__ == "__main__":
     app.run(debug=True)
