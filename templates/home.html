@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Career Elevate AI</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet"/>
+  <link href="/static/home.css" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet">
+</head>
+<body>
+
+<!-- Navbar -->
+<nav class="navbar navbar-expand-lg navbar-dark" style="background: linear-gradient(90deg, #4b6cb7, #182848);">
+  <div class="container-fluid">
+    <a class="navbar-brand" href="#">Career Elevate AI</a>
+    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse justify-content-end" id="navbarNav">
+      <ul class="navbar-nav">
+        <li class="nav-item"><a class="nav-link nav-link-custom" href="{{ url_for('home') }}">Home</a></li>
+        {% if current_user.is_authenticated %}
+        <li class="nav-item"><a class="nav-link nav-link-custom" href="{{ url_for('logout') }}">Logout</a></li>
+        {% else %}
+        <li class="nav-item"><a class="nav-link nav-link-custom" href="{{ url_for('login') }}">Join Us</a></li>
+        {% endif %}
+      </ul>
+    </div>
+  </div>
+</nav>
+
+<!-- Carousel -->
+<div id="carouselExample" class="carousel slide" data-bs-ride="carousel">
+    <div class="carousel-indicators">
+      <button type="button" data-bs-target="#carouselExample" data-bs-slide-to="0" class="active"></button>
+      <button type="button" data-bs-target="#carouselExample" data-bs-slide-to="1"></button>
+      <button type="button" data-bs-target="#carouselExample" data-bs-slide-to="2"></button>
+    </div>
+    <div class="carousel-inner">
+      <!-- Slide 1: Sign-up -->
+      <div class="carousel-item active">
+        <img src="{{ url_for('static', filename='s3.jpeg') }}" class="d-block w-100" style="height: 500px; object-fit: cover;" />
+        <div class="carousel-caption d-flex flex-column align-items-start justify-content-center caption-bg-left">
+          <h5>Welcome to Career Elevate AI</h5>
+          <p>Empowering your career journey with personalized AI-driven support.</p>
+          <a href="{{ url_for('login') }}" class="btn btn-outline-light glow-on-hover">Join Now</a>
+        </div>
+      </div>
+  
+      <!-- Slide 2: Interview Practice -->
+      <div class="carousel-item">
+        <img src="{{ url_for('static', filename='s1.jpeg') }}" class="d-block w-100" style="height: 500px; object-fit: cover;" />
+        <div class="carousel-caption d-flex flex-column align-items-center justify-content-center caption-bg-center">
+          <h5>Practice Interviews Like a Pro</h5>
+          <p>Mock interviews with instant AI feedback tailored to your role and experience.</p>
+          <a href="{{ url_for('index') }}" class="btn btn-outline-light glow-on-hover">Start Practicing</a>
+        </div>
+      </div>
+  
+      <!-- Slide 3: Resume Feedback -->
+      <div class="carousel-item">
+        <img src="{{ url_for('static', filename='s2.jpeg') }}" class="d-block w-100" style="height: 500px; object-fit: cover;" />
+        <div class="carousel-caption d-flex flex-column align-items-end justify-content-center caption-bg-right">
+          <h5>Get Smarter Resume Feedback</h5>
+          <p>Upload your resume and let Career Elevate AI enhance it with actionable suggestions.</p>
+          <a href="{{ url_for('index') }}" class="btn btn-outline-light glow-on-hover">Boost Resume</a>
+        </div>
+      </div>
+    </div>
+  
+    <button class="carousel-control-prev" type="button" data-bs-target="#carouselExample" data-bs-slide="prev">
+      <span class="carousel-control-prev-icon"></span>
+    </button>
+    <button class="carousel-control-next" type="button" data-bs-target="#carouselExample" data-bs-slide="next">
+      <span class="carousel-control-next-icon"></span>
+    </button>
+  </div>
+  
+
+<!-- Features -->
+<div class="container my-5">
+    <h2 class="text-center mb-4">Features</h2>
+    <div class="row justify-content-center text-center">
+      
+      <!-- AI Interview Practice Card -->
+      <div class="col-md-5 mb-4">
+        <a href="{{ url_for('index') }}" class="text-decoration-none text-dark">
+          <div class="card feature-card border-0 shadow-lg hover-card h-100">
+            <div class="card-body">
+              <!-- Lottie Animation for Interview -->
+              <div class="mb-3">
+                <lottie-player src="{{ url_for('static', filename='animation1.json') }}" speed="1" style="height: 180px;" loop autoplay></lottie-player>
+              </div>
+              <h5 class="card-title mt-2">AI Interview Practice</h5>
+              <p class="card-text">Practice mock interviews tailored to your role and get instant feedback from AI.</p>
+            </div>
+          </div>
+        </a>
+      </div>
+  
+      <!-- Resume Feedback Card -->
+      <div class="col-md-5 mb-4">
+        <a href="{{ url_for('index') }}" class="text-decoration-none text-dark">
+          <div class="card feature-card border-0 shadow-lg hover-card h-100">
+            <div class="card-body">
+              <!-- Lottie Animation for Resume -->
+              <div class="mb-3">
+                <lottie-player src="{{ url_for('static', filename='animation2.json') }}" speed="1" style="height: 180px;" loop autoplay></lottie-player>
+              </div>
+              <h5 class="card-title mt-2">Resume Feedback</h5>
+              <p class="card-text">Upload your resume and receive personalized feedback to make it stand out.</p>
+            </div>
+          </div>
+        </a>
+      </div>
+    </div>
+  </div>  
+
+<!-- Footer -->
+<footer class="text-light text-center text-lg-start" style="background: #1a1a2e;">
+    <div class="container p-4">
+      <div class="row">
+        <div class="col-lg-6 col-md-12 mb-4">
+          <h5 class="text-uppercase">Career Elevate AI</h5>
+          <p>Empowering students and job seekers with personalized resume feedback, AI-powered interview practice, and actionable career insights. <br>Elevate your career with the help of AI.</p>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-4">
+          <h5 class="text-uppercase">Quick Links</h5>
+          <ul class="list-unstyled mb-0">
+            <li><a href="/" class="text-light text-decoration-none">Home</a></li>
+            <li><a href="{{ url_for('login') }}" class="text-light text-decoration-none">Sign Up</a></li>
+          </ul>
+        </div>
+        <div class="col-lg-3 col-md-6 mb-4">
+          <h5 class="text-uppercase">Connect</h5>
+          <a href="https://www.linkedin.com" class="btn btn-outline-light btn-floating m-1">LinkedIn</a>
+          <a href="https://www.youtube.com" class="btn btn-outline-light btn-floating m-1">YouTube</a>
+          <a href="mailto:contact@careerelevate.ai" class="btn btn-outline-light btn-floating m-1">Email</a>
+        </div>
+      </div>
+    </div>
+    <div class="text-center p-3" style="background-color: #0f3460;">
+      © 2025 Career Elevate AI
+    </div>
+  </footer>  
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js"></script>
+</body>
+</html>
