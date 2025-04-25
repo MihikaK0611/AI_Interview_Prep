@@ -1,0 +1,33 @@
+body {
+    font-family: Arial, sans-serif;
+    background: #f9f9f9;
+    padding: 2rem;
+}
+
+.container {
+    background: white;
+    padding: 2rem;
+    border-radius: 10px;
+    max-width: 600px;
+    margin: auto;
+    box-shadow: 0 0 10px rgba(0,0,0,0.1);
+}
+
+h1 {
+    text-align: center;
+}
+
+form {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+#resultBox {
+    margin-top: 1.5rem;
+    padding: 1rem;
+    background: #eef;
+    border-left: 5px solid #007BFF;
+    white-space: pre-wrap;
+    font-size: 0.9rem;
+}
