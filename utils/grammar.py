@@ -2,12 +2,17 @@
 import language_tool_python
 import textstat
 
-def grammar_check(text):
-    tool = language_tool_python.LanguageTool('en-US')
+tool = language_tool_python.LanguageTool('en-US')
+
+from collections import Counter
+
+def grammar_check(text, top_n=10):
     matches = tool.check(text)
-    grammar_errors = len(matches)
-    return grammar_errors
+    all_messages = [match.message.strip() for match in matches]
+    message_counts = Counter(all_messages)
+    # Return sorted top N most common issues
+    return [f"{msg} ({count} times)" for msg, count in message_counts.most_common(top_n)]
+
 
 def readability_score(text):
-    readability_score = textstat.flesch_reading_ease(text)
-    return readability_score
+    return textstat.flesch_reading_ease(text)
