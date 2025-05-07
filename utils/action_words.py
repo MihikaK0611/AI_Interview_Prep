@@ -1,5 +1,14 @@
 # utils/action_words.py
-PASSIVE_PHRASES = ["was", "were", "is being", "are being", "have been", "has been"]
+import language_tool_python
+
+tool = language_tool_python.LanguageTool('en-US')
 
 def detect_passive_phrases(text):
-    return [phrase for phrase in PASSIVE_PHRASES if phrase in text.lower()]
+    matches = tool.check(text)
+    passive_phrases = []
+
+    for match in matches:
+        if "passive voice" in match.ruleId.lower() or "passive voice" in match.message.lower():
+            passive_phrases.append(match.context)
+
+    return list(set(passive_phrases))
