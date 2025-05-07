@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Resume Analysis Report</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      :root {
+        --primary-blue: #0077b6;
+        --dark-blue: #023047;
+        --success-green: #2e7d32;
+        --light-bg: #e0f7fa;
+        --card-bg: #ffffff;
+        --text-dark: #333333;
+        --text-medium: #555555;
+        --text-light: #999999;
+        --border-radius: 18px;
+        --box-shadow: 0 12px 30px rgba(0, 0, 0, 0.1);
+        --section-spacing: 30px;
+      }
+
+      body {
+        font-family: "Poppins", "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+        background: linear-gradient(135deg, var(--light-bg), var(--card-bg));
+        margin: 0;
+        padding: 40px;
+        color: var(--text-dark);
+        line-height: 1.6;
+        min-height: 100vh;
+      }
+
+      .container {
+        background: var(--card-bg);
+        padding: 40px;
+        border-radius: var(--border-radius);
+        box-shadow: var(--box-shadow);
+        max-width: 900px;
+        margin: 0 auto;
+      }
+
+      h1 {
+        text-align: center;
+        color: var(--primary-blue);
+        font-size: 2.4rem;
+        margin-bottom: 10px;
+        font-weight: 600;
+        letter-spacing: -0.5px;
+      }
+
+      .report-meta {
+        text-align: center;
+        color: var(--text-medium);
+        margin-bottom: 40px;
+        font-size: 0.95rem;
+      }
+
+      h2 {
+        color: var(--dark-blue);
+        font-size: 1.5rem;
+        font-weight: 500;
+        margin: var(--section-spacing) 0 15px;
+        padding-bottom: 8px;
+        border-bottom: 2px solid rgba(0, 119, 182, 0.1);
+        position: relative;
+      }
+
+      h2::after {
+        content: "";
+        position: absolute;
+        left: 0;
+        bottom: -2px;
+        width: 80px;
+        height: 2px;
+        background: var(--primary-blue);
+      }
+
+      .score {
+        font-size: 1.5rem;
+        font-weight: 600;
+        color: var(--success-green);
+        margin: 15px 0;
+        display: inline-block;
+        padding: 8px 20px;
+        background: rgba(46, 125, 50, 0.1);
+        border-radius: 50px;
+      }
+
+      ul {
+        list-style-type: none;
+        padding-left: 0;
+        margin: 20px 0;
+      }
+
+      li {
+        padding: 10px 15px;
+        margin-bottom: 8px;
+        background: rgba(0, 119, 182, 0.05);
+        border-left: 3px solid var(--primary-blue);
+        border-radius: 4px;
+        transition: all 0.2s ease;
+      }
+
+      li:hover {
+        background: rgba(0, 119, 182, 0.1);
+        transform: translateX(5px);
+      }
+
+      .none {
+        color: var(--text-light);
+        font-style: italic;
+        padding: 15px;
+        background: rgba(153, 153, 153, 0.05);
+        border-radius: 4px;
+        display: inline-block;
+      }
+
+      .section-scores li {
+        display: flex;
+        justify-content: space-between;
+      }
+
+      .section-name {
+        font-weight: 500;
+        color: var(--text-medium);
+      }
+
+      .section-score {
+        font-weight: 600;
+        color: var(--primary-blue);
+      }
+
+      /* Responsive design */
+      @media (max-width: 768px) {
+        body {
+          padding: 20px;
+        }
+
+        .container {
+          padding: 25px;
+        }
+
+        h1 {
+          font-size: 2rem;
+        }
+
+        h2 {
+          font-size: 1.3rem;
+        }
+      }
+
+      /* Animation for score reveal */
+      @keyframes fadeIn {
+        from {
+          opacity: 0;
+          transform: translateY(10px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+
+      .score,
+      li {
+        animation: fadeIn 0.5s ease-out forwards;
+      }
+
+      /* Delay animations for list items */
+      li:nth-child(1) {
+        animation-delay: 0.1s;
+      }
+      li:nth-child(2) {
+        animation-delay: 0.2s;
+      }
+      li:nth-child(3) {
+        animation-delay: 0.3s;
+      }
+      li:nth-child(4) {
+        animation-delay: 0.4s;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Resume Analysis Report</h1>
+      <div class="report-meta">{{ date_generated }}</div>
+
+      <h2>ATS Match Score</h2>
+      <p class="score">{{ ats }}%</p>
+
+      <h2>Grammar Issues</h2>
+      {% if grammar_issues %}
+      <ul>
+        {% for issue in grammar_issues %}
+        <li>{{ issue }}</li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p class="none">No grammar issues found. Excellent writing!</p>
+      {% endif %}
+
+      <h2>Readability Score</h2>
+      <p class="score">{{ readability }}/100</p>
+
+      <h2>Soft Skills Detected</h2>
+      {% if soft_skills %}
+      <ul>
+        {% for skill in soft_skills %}
+        <li>{{ skill }}</li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p class="none">No soft skills prominently detected.</p>
+      {% endif %}
+
+      <h2>Passive / Weak Phrases</h2>
+      {% if weak_phrases %}
+      <ul>
+        {% for phrase in weak_phrases %}
+        <li>{{ phrase }}</li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p class="none">No weak phrases detected. Strong language used!</p>
+      {% endif %}
+
+      <h2>Section Effectiveness Scores</h2>
+      {% if section_scores %}
+      <ul class="section-scores">
+        {% for section, score in section_scores.items() %}
+        <li>
+          <span class="section-name">{{ section }}</span>
+          <span class="section-score">{{ score }} / 10</span>
+        </li>
+        {% endfor %}
+      </ul>
+      {% else %}
+      <p class="none">No section scores available.</p>
+      {% endif %}
+    </div>
+  </body>
+</html>
