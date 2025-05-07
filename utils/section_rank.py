@@ -1,4 +1,3 @@
-# utils/section_rank.py
 import re
 
 def section_score(text, section_keywords):
@@ -6,9 +5,14 @@ def section_score(text, section_keywords):
 
 def rank_resume_sections(text):
     sections = {
-        "Education": ["degree", "bachelor", "master", "university"],
-        "Projects": ["project", "developed", "built", "created"],
-        "Skills": ["python", "machine learning", "sql", "excel"]
+        "Education": ["degree", "bachelor", "master", "university", "gpa", "institute"],
+        "Projects": ["project", "developed", "built", "created", "implemented"],
+        "Skills": ["python", "machine learning", "sql", "excel", "tensorflow", "pandas"]
     }
-    scores = {section: section_score(text, kws) for section, kws in sections.items()}
-    return sorted(scores.items(), key=lambda x: x[1], reverse=True)
+    raw_scores = {section: section_score(text, kws) for section, kws in sections.items()}
+
+    # Normalize to a score out of 10
+    max_score = max(raw_scores.values()) or 1  # prevent div by zero
+    scores = {section: round((score / max_score) * 10, 1) for section, score in raw_scores.items()}
+
+    return scores
