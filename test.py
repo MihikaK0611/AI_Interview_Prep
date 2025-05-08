@@ -27,7 +27,7 @@ import string
 
 app = Flask(__name__)
 
-client = Groq(api_key="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")
+client = Groq(api_key="")
 
 # Suppress TensorFlow warnings
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
