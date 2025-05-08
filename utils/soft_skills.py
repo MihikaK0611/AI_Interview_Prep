@@ -2,7 +2,7 @@
 import ast
 
 from groq import Groq
-client = Groq(api_key="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")
+client = Groq(api_key="")
 
 
 import re
